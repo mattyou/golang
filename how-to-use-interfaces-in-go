@@ -1,5 +1,3 @@
-本文转载自：http://jordanorelli.com/post/32665860244/how-to-use-interfaces-in-go
-
 How to use interfaces in Go
 Before I started programming Go, I was doing most of my work with Python. As a Python programmer, I found that learning to use interfaces in Go was extremely difficult. That is, the basics were easy, and I knew how to use the interfaces in the standard library, but it took some practice before I knew how to design my own interfaces.  In this post, I’ll discuss Go’s type system in an effort to explain how to use interfaces effectively.
 Introduction to interfaces
