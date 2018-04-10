@@ -1,2 +1,2 @@
 # golang
-learn golang
+Golang学习资料整理
