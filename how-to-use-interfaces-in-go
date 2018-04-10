@@ -1,16 +1,24 @@
 本文转载自：http://jordanorelli.com/post/32665860244/how-to-use-interfaces-in-go
 
 How to use interfaces in Go
+在Go中如何使用接口
 Before I started programming Go, I was doing most of my work with Python. As a Python programmer, I found that learning to use interfaces in Go was extremely difficult. That is, the basics were easy, and I knew how to use the interfaces in the standard library, but it took some practice before I knew how to design my own interfaces.  In this post, I’ll discuss Go’s type system in an effort to explain how to use interfaces effectively.
+在开始编程Go之前，我正在使用Python进行大部分工作。作为一名Python程序员，我发现学习在Go中使用接口非常困难。也就是说，基础很简单，我知道如何使用标准库中的接口，但是在我知道如何设计我自己的接口之前需要一些练习。在这篇文章中，我将讨论Go的类型系统，以解释如何有效地使用接口。
 Introduction to interfaces
 
+介绍接口
+
 So what is an interface? An interface is two things: it is a set of methods, but it is also a type. Let’s focus on the method set aspect of interfaces first.
+那么接口是什么？一个接口是两件事：它是一组方法，但它也是一种类型。我们先关注接口的方法集方面
 Typically, we’re introduced to interfaces with some contrived example. Let’s go with the contrived example of writing some application where you’re defining Animal datatypes, because that’s a totally realistic situation that happens all the time. The Animal type will be an interface, and we’ll define an Animal as being anything that can speak. This is a core concept in Go’s type system; instead of designing our abstractions in terms of what kind of data our types can hold, we design our abstractions in terms of what actions our types can execute.
+通常，我们介绍一些人为的例子。让我们继续讨论编写一些定义动物数据类型的应用程序的例子，因为这是一个始终发生的完全现实的情况。动物类型将成为一个接口，我们将把动物定义为任何可以说话的东西。这是Go类型系统的核心概念;我们不是根据我们的类型可以容纳什么样的数据来设计我们的抽象，而是根据我们的类型可以执行的操作来设计我们的抽象
 We start by defining our Animal interface:
+我们从定义我们的动物界面开始：
 type Animal interface {
     Speak() string
 }
 pretty simple: we define an Animal as being any type that has a method named Speak. The Speak method takes no arguments and returns a string. Any type that defines this method is said to satisfy the Animalinterface. There is no implements keyword in Go; whether or not a type satisfies an interface is determined automatically. Let’s create a couple of types that satisfy this interface:
+非常简单：我们将Animal定义为任何具有名为Speak的方法的类型。 Speak方法不接受任何参数并返回一个字符串。据说任何定义这种方法的类型都可以满足Animal Interface的要求。 Go中没有implements关键字;自动确定类型是否实现了接口。我们来创建几个满足这个接口的类型：
 type Dog struct {
 }
 
@@ -40,6 +48,7 @@ func (j JavaProgrammer) Speak() string {
 }
 
 We now have four different types of animals: A dog, a cat, a llama, and a Java programmer. In our main() function, we can create a slice of Animals, and put one of each type into that slice, and see what each animal says. Let’s do that now:
+我们现在有四种不同类型的动物：一只狗，一只猫，一只美洲驼和一名Java程序员。在我们的main()函数中，我们可以创建一个动物切片，并将每种类型中的一种放入该切片中，并查看每个动物说的内容。现在我们来做
 func main() {
     animals := []Animal{Dog{}, Cat{}, Llama{}, JavaProgrammer{}}
     for _, animal := range animals {
@@ -48,19 +57,28 @@ func main() {
 }
 
 You can view and run this example here:http://play.golang.org/p/yGTd4MtgD5
+你可以执行示例代码，并查看结果:http://play.golang.org/p/yGTd4MtgD5
 Great, now you know how to use interfaces, and I don’t need to talk about them any more, right? Well, no, not really. Let’s look at a few things that aren’t very obvious to the budding gopher.
+太好了，现在你知道如何使用接口了，我不需要再谈论它们了，对吧？呃，不，不是。让我们看看几个对萌芽的gopher不是很明显的事情。
 The interface{} type
 
+interface{} 类型
 The interface{} type, the empty interface, is the source of much confusion. The interface{} type is the interface that has no methods. Since there is no implements keyword, all types implement at least zero methods, and satisfying an interface is done automatically, all types satisfy the empty interface. That means that if you write a function that takes an interface{} value as a parameter, you can supply that function with any value. So, this function:
+interface{}类型是空接口，是混乱的根源。interface{}类型是没有方法的接口。由于没有implements关键字，所有类型至少实现零方法，并且自动实现一个接口，所有类型都实现空接口。这意味着，如果您编写一个将interface{}值作为参数的函数，则可以为该函数提供任何值。所以，这个功能：
 func DoSomething(v interface{}) {
    // ...
 }
 
 will accept any parameter whatsoever.
+将接受任何参数。
 Here’s where it gets confusing: inside of the DoSomething function, what is v’s type? Beginner gophers are led to believe that “v is of any type”, but that is wrong. v is not of any type; it is of interface{} type. Wait, what? When passing a value into the DoSomething function, the Go runtime will perform a type conversion (if necessary), and convert the value to an interface{} value. All values have exactly one type at runtime, and v’s one static type is interface{}.
+这里是令人困惑的地方：在DoSomething函数内部，v的类型是什么？初学者认为“v是任何类型”，但这是错误的。 v不是任何类型;它是interface{}类型。等等，什么？将值传递给DoSomething函数时，Go运行时将执行类型转换（如有必要），并将该值转换为interface{}值。所有值在运行时都只有一种类型，而v的一种静态类型是interface {}。
 This should leave you wondering: ok, so if a conversion is taking place, what is actually being passed into a function that takes an interface{} value (or, what is actually stored in an []Animal slice)? An interface value is constructed of two words of data; one word is used to point to a method table for the value’s underlying type, and the other word is used to point to the actual data being held by that value. I don’t want to bleat on about this endlessly. If you understand that an interface value is two words wide and it contains a pointer to the underlying data, that’s typically enough to avoid common pitfalls. If you are curious to learn more about the implementation of interfaces, I think Russ Cox’s description of interfaces is very, very helpful.
+解开你的疑惑：好的，如果发生了转换，什么是实际被传递给一个函数接受一个interface{ } 值（或者实际上是存储在一个[]Animal ）？接口值由两个数据字构成；一个字用于指向值的底层类型的方法表，另一个字用于指向由该值保存的实际数据。我不想多说。如果您理解接口值是两个字宽，它包含一个指向底层数据的指针，这通常足以避免常见的陷阱。如果您想了解更多关于接口的实现，我认为 Russ Cox描述接口 是非常，非常有帮助
 In our previous example, when we constructed a slice of Animal values, we did not have to say something onerous like Animal(Dog{}) to put a value of type Dog into the slice of Animal values, because the conversion was handled for us automatically. Within the animals slice, each element is of Animal type, but our different values have different underlying types.
+在我们之前的例子中，当我们构建一个动物值时，我们不必像Animal（Dog {}）那样说一些繁重的东西来将Dog类型的值放入Animal值中，因为转换是为我们处理的自动。在动物切片中，每个元素都是动物类型的，但是我们不同的值具有不同的基础类型。
 So… why does this matter? Well, understanding how interfaces are represented in memory makes some potentially confusing things very obvious. For example, the question “can I convert a []T to an []interface{}” is easy to answer once you understand how interfaces are represented in memory. Here’s an example of some broken code that is representative of a common misunderstanding of the interface{} type:
+所以…这为什么重要？理解接口在内存中的表现会使一些潜在的混乱现象变得非常明显。例如，当理解接口在内存中如何表示时，“我是否可以将[]T转换为[]interface{}”是很容易回答的问题。这里的一个例子代码片段的interface{ } 型一个常见的误解的代表：
 package main
 
 import (
@@ -79,7 +97,9 @@ func main() {
 }
 
 Run it here:http://play.golang.org/p/4DuBoi2hJU
+在这儿执行:http://play.golang.org/p/4DuBoi2hJU
 By running this, you can see that we encounter the following error: cannot use names (type []string) as type []interface {} in function argument. If we want to actually make that work, we would have to convert the []string to an []interface{}:
+在这，你可以看到，我们遇到了以下错误： cannot use names (type []string) as type []interface {} in function argument。 如果我们想让它正常工作，我们要将 [ ] string转换成 [ ]interface{ }：
 package main
 
 import (
@@ -102,35 +122,50 @@ func main() {
 }
 
 Run it here:http://play.golang.org/p/Dhg1YS6BJS
+在这儿执行:http://play.golang.org/p/Dhg1YS6BJS
 That’s pretty ugly, but c'est la vie. Not everything is perfect. (in reality, this doesn’t come up very often, because []interface{} turns out to be less useful than you would initially expect)
+这很难看，但 C'est La Vie。不是每件事都是完美的。（事实上，这并不经常发生，因为 [ ]interface{ } 没有你期望的那么有用）
 Pointers and interfaces
 
+指针和接口
 Another subtlety of interfaces is that an interface definition does not prescribe whether an implementor should implement the interface using a pointer receiver or a value receiver. When you are given an interface value, there’s no guarantee whether the underlying type is or isn’t a pointer. In our previous example, we defined all of our methods on value receivers, and we put the associated values into the Animalslice. Let’s change this and make the Cat’s Speak() method take a pointer receiver:
+接口的另一个细微之处在于接口定义并不规定实现者是否应该使用指针接收器或值接收器来实现接口。当给出一个接口值时，不能保证底层类型是否为指针。在我们之前的例子中，我们在值接收者中定义了所有的方法，并且我们把相关的值放入了Animals切片中。让我们改变这一点，让Cat的Speak()方法带一个指针接收器：
 func (c *Cat) Speak() string {
     return "Meow!"
 }
 
 If you change that one signature, and you try to run the same program exactly as-is (http://play.golang.org/p/TvR758rfre), you will see the following error:
+如果您更改了该签名，并且您尝试完全按原样运行相同的程序（http://play.golang.org/p/TvR758rfre），您将看到以下错误:
 prog.go:40: cannot use Cat literal (type Cat) as type Animal in array element:
     Cat does not implement Animal (Speak method requires pointer receiver)
 This error message is a bit confusing at first, to be honest. What it’s saying is not that the interface Animal demands that you define your method as a pointer receiver, but that you have tried to convert a Catstruct into an Animal interface value, but only *Cat satisfies that interface. You can fix this bug by passing in a *Cat pointer to the Animal slice instead of a Cat value, by using new(Cat) instead of Cat{}(you could also say &Cat{}, I simply prefer the look of new(Cat)):
+首先，这个错误信息有点令人困惑，说实话。它所说的并不是接口Animal要求你将你的方法定义为指针接收器，而是你试图将Cat struct转换为Animal接口值，但只有* Cat满足该界面。您可以通过使用新的（Cat）而不是Cat {}来传递* Cat指针到动物切片而不是Cat值来修复此错误（您可能会用&Cat{}，我更喜欢用 new(Cat):
 animals := []Animal{Dog{}, new(Cat), Llama{}, JavaProgrammer{}}
 now our program works again:http://play.golang.org/p/x5VwyExxBM
+现在我们的程序再次运行：http://play.golang.org/p/x5VwyExxBM
 Let’s go in the opposite direction: let’s pass in a *Dog pointer instead of a Dog value, but this time we won’t change the definition of the Dogtype’s Speak method:
+让我们沿相反的方向走：让我们传入* Dog指针而不是Dog值，但是这次我们不会更改Dog类型的Speak方法的定义
 animals := []Animal{new(Dog), new(Cat), Llama{}, JavaProgrammer{}}
 This also works (http://play.golang.org/p/UZ618qbPkj), but recognize a subtle difference:  we didn’t need to change the type of the receiver of the Speak method. This works because a pointer type can access the methods of its associated value type, but not vice versa. That is, a *Dogvalue can utilize the Speak method defined on Dog, but as we saw earlier, a Cat value cannot access the Speak method defined on *Cat.
+这样也能工作(http://play.golang.org/p/UZ618qbPkj)但意识到一个细微的差别：我们不需要改变Speak方法的接收者类型。这是有效的，因为指针类型可以访问其相关值类型的方法，但反之亦然。也就是说，* Dog值可以使用Dog上定义的Speak方法，但正如我们前面看到的，Cat值无法访问* Cat上定义的Speak方法
 That may sound cryptic, but it makes sense when you remember the following: everything in Go is passed by value. Every time you call a function, the data you’re passing into it is copied. In the case of a method with a value receiver, the value is copied when calling the method. This is slightly more obvious when you understand that a method of the following signature:
+这听起来可能很神秘，但是当你记住以下内容时，这很有意义：Go中的所有内容都是按值传递的。每次你调用一个函数时，你传入的数据都会被复制。对于具有值接收方的方法，在调用方法时会复制该值。当您了解以下签名的方法时，这一点稍微更加明显
 func (t T)MyMethod(s string) {
     // ...
 }
 
 is a function of type func(T, string); method receivers are passed into the function by value just like any other parameter.
+是类型func（T，string）的函数;方法接收器像任何其他参数一样通过值传递给函数
 Any changes to the receiver made inside of a method defined on a value type (e.g., func (d Dog) Speak() { ... }) will not be seen by the caller because the caller is scoping a completely separate Dog value. Since everything is passed by value, it should be obvious why a *Catmethod is not usable by a Cat value; any one Cat value may have any number of *Cat pointers that point to it. If we try to call a *Cat method by using a Cat value, we never had a *Cat pointer to begin with. Conversely, if we have a method on the Dog type, and we have a *Dogpointer, we know exactly which Dog value to use when calling this method, because the *Dog pointer points to exactly one Dog value; the Go runtime will dereference the pointer to its associated Dog value any time it is necessary. That is, given a *Dog value d and a method Speakon the Dog type, we can just say d.Speak(); we don’t need to say something like d->Speak() as we might do in other languages.
+调用者不会看到在值类型上定义的方法（例如，func（d Dog）Speak（）{...}）中对接收器所做的任何更改，因为调用者正在确定一个完全独立的Dog值。由于所有东西都是按值传递的，所以为什么* Cat method不能被Cat值使用;任何一个Cat值可能有任意数量的指向它的Cat指针。如果我们试图通过使用Cat值来调用* Cat方法，但是不知道使用哪个* Cat指针。相反，如果我们有一个关于Dog类型的方法，并且我们有一个* Dog指针，我们知道在调用此方法时确切使用哪个Dog值，因为* Dog指针正好指向一个Dog值;只要有必要，Go运行时就会将指针取消引用其关联的Dog值。也就是说，给定一个* Dog值d和一个在 Dog类型上的Speak方法，我们可以说d.Speak（）;我们不需要像d-> Speak()，就像我们在其他语言中所做的那样
 The real world: getting a proper timestamp out of the Twitter API
 
+真实世界：从Twitter API中获取适当的时间戳
 The Twitter API represents timestamps using a string of the following format:
+Twitter API使用以下格式的字符串表示时间戳
 "Thu May 31 00:00:01 +0000 2012"
 of course, timestamps can be represented in any number of ways in a JSON document, because timestamps aren’t a part of the JSON spec. For the sake of brevity, I won’t put in the entire JSON representation of a tweet, but let’s take a look at how the created_at field would be handled by encoding/json:
+当然，时间戳可以用JSON文档中的任何方式表示，因为时间戳不是JSON规范的一部分。为了简洁起见，我不会放置推文的整个JSON表示，但让我们看看created_at字段将如何通过encoding/ json来处理:
 package main
 
 import (
@@ -189,7 +224,9 @@ func (t *Timestamp) UnmarshalJSON(b []byte) error {
     // ...
 }
 By implementing this method we satisfy the json.Unmarshalerinterface, causing json.Unmarshal to call our custom unmarshalling code when seeing a Timestamp value. For this case, we use a pointer method, because we want the caller to the see the changes made to the receiver. In order to set the value that a pointer points to, we dereference the pointer manually using the * operator. Inside of the UnmarshalJSON method, t represents a pointer to a Timestamp value. By saying *t, we dereference the pointer t and we are able to access the value that t points to. Remember: everything is pass-by-value in Go. That means that inside of the UnmarshalJSON method, the pointer t is not the same pointer as the pointer in its calling context; it is a copy. If you were to assign t to another value directly, you would just be reassigning a function-local pointer; the change would not be seen by the caller.  However, the pointer inside of the method call points to the same data as the pointer in its calling scope; by dereferencing the pointer, we make our change visible to the caller.
+通过实现这个方法，我们满足了json.Unmarshalerinterface，当看到一个Timestamp值时，导致json.Unmarshal调用我们的自定义解组代码。对于这种情况，我们使用指针方法，因为我们希望调用者看到对接收者所做的更改。为了设置指针指向的值，我们使用*运算符手动解引用指针。在UnmarshalJSON方法内部，t代表一个指向Timestamp值的指针。通过说* t，我们引用指针t，并且我们可以访问t指向的值。请记住：Go的所有内容都是按价值传递的。这意味着在UnmarshalJSON方法中，指针t与其调用上下文中的指针不同;它是一个副本。如果您直接将t赋值给另一个值，则只需重新分配函数本地指针;主叫方不会看到变化。但是，方法调用内部的指针指向与其调用范围中的指针相同的数据;通过取消引用指针，我们使更改对调用者可见
 We can make use of the time.Parse method, which has the signature func(layout, value string) (Time, error). That is, it takes two strings: the first string is a layout string that describes how we are formatting our timestamps, and the second is the value we wish to parse. It returns a time.Time value, as well as an error (in case we failed to parse the timestamp for some reason). You can read more about the semantics of the layout strings in the time package documentation, but in this example we won’t need to figure out the layout string manually because this layout string already exists in the standard library as the value time.RubyDate. So in effect, we can resolve the string “Thu May 31 00:00:01 +0000 2012” to a time.Timevalue by invoking the function time.Parse(time.RubyDate, "Thu May 31 00:00:01 +0000 2012"). The value we will receive is of type time.Time. In our example, we’re interested in values of the type Timestamp. We can convert the time.Time value to a Timestamp value by saying Timestamp(v), where v is our time.Time value. Ultimately, our UnmarshalJSON function winds up looking like this:
+我们可以利用time.Parse方法，它具有签名func（布局，值字符串）（时间，错误）。也就是说，它需要两个字符串：第一个字符串是描述我们如何格式化时间戳的布局字符串，第二个字符串是我们希望解析的值。它返回一个time.Time值，以及一个错误（如果我们由于某种原因未能解析时间戳）。您可以在时间包文档中阅读关于布局字符串语义的更多信息，但在此示例中，我们不需要手动计算布局字符串，因为此布局字符串作为值time.RubyDate已存在于标准库中。所以实际上，我们可以通过调用函数time.Parse（time.RubyDate，“Thu May 31 00:00:01 +0000”）将字符串“Thu May 31 00:00:01 +0000 2012”解析为time.Timevalue 2012\" ）。我们将收到的价值是类型time.Time。在我们的例子中，我们对Timestamp类型的值感兴趣。我们可以通过说Timestamp（v）将time.Time值转换为Timestamp值，其中v是我们的时间.Time值。最终，我们的UnmarshalJSON功能看起来像这样:
 func (t *Timestamp) UnmarshalJSON(b []byte) error {
     v, err := time.Parse(time.RubyDate, string(b[1:len(b)-1]))
     if err != nil {
@@ -202,12 +239,17 @@ we take a subslice of the incoming byte slice because the incoming byte slice is
 Source for the entire timestamp example can be seen (and executed) here:http://play.golang.org/p/QpiFsJi-nZ
 Real-world interfaces: getting an object out of an http request
 
+真实世界的接口：从http请求中获取对象
 Let’s wrap up by seeing how we might design an interfaces to solve a common web development problem: we wish to parse the body of an HTTP request into some object data. At first, this is not a very obvious interface to define. We might try to say that we’re going to get a resource from an HTTP request like this:
+让我们来看看我们如何设计一个接口来解决一个常见的Web开发问题：我们希望将HTTP请求的主体解析为一些对象数据。起初，这不是一个非常明显的定义界面。我们可以试着说，我们将从这样的HTTP请求中获取资源:
 GetEntity(*http.Request) (interface{}, error)
 because an interface{} can have any underlying type, so we can just parse our request and return whatever we want. This turns out to be a pretty bad strategy, the reason being that we wind up sticking too much logic into the GetEntity function, the GetEntity function now needs to be modified for every new type, and we’ll need to use a type assertion to do anything useful with that returned interface{} value. In practice, functions that return interface{} values tend to be quite annoying, and as a rule of thumb you can just remember that it’s typically better to take in an interface{} value as a parameter than it is to return an interface{} value. (Postel’s Law, applied to interfaces)
+因为interface{}可以有任何基础类型，所以我们可以解析我们的请求并返回任何我们想要的。事实证明这是一个非常糟糕的策略，原因是我们在GetEntity函数中粘贴了太多的逻辑，现在需要为每个新类型修改GetEntity函数，并且我们需要使用类型断言来对返回的接口值做任何有用的操作。在实践中，返回interface {}值的函数往往非常烦人，作为一个经验法则，您可以记住，将interface{}类型作为参数通常比返回interface{}类型更好。 （Postel定律，适用于接口）
 We might also be tempted to write some type-specific function like this:
+我们也可能会试图编写一些类型特定的函数：
 GetUser(*http.Request) (User, error)
 This also turns out to be pretty inflexible, because now we have different functions for every type, but no sane way to generalize them. Instead, what we really want to do is something more like this:
+这也变得非常不灵活，因为现在我们对于每种类型都有不同的功能，但没有理智的方式来推广它们。相反，我们真正想要做的就是更像这样的事情
 type Entity interface {
     UnmarshalHTTP(*http.Request) error
 }
@@ -216,25 +258,33 @@ func GetEntity(r *http.Request, v Entity) error {
 }
 
 Where the GetEntity function takes an interface value that is guaranteed to have an UnmarshalHTTP method. To make use of this, we would define on our User object some method that allows the User to describe how it would get itself out of an HTTP request:
+GetEntity函数采用保证具有UnmarshalHTTP方法的接口值。为了使用这个，我们将在我们的User对象上定义一些方法，它允许用户描述如何从HTTP请求中获得它自己：
 func (u *User) UnmarshalHTTP(r *http.Request) error {
    // ...
 }
 
 in your application code, you would declare a var of User type, and then pass a pointer to this function into GetEntity:
+在您的应用程序代码中，您将声明一个var的User类型，然后将指向此函数的指针传递给GetEntity
 var u User
 if err := GetEntity(req, &u); err != nil {
     // ...
 }
 
 That’s very similar to how you would unpack JSON data.  This type of thing works consistently and safely because the statement var u Userwill automatically zero the User struct.  Go is not like some other languages in that declaration and initialization occur separately, and that by declaring a value without initializing it you can create a subtle pitfall wherein you might access a section of junk data; when declaring the value, the runtime will zero the appropriate memory space to hold that value.  Even if our UnmarshalHTTP method fails to utilize some fields, those fields will contain valid zero data instead of junk.
+这与您如何解压JSON数据非常相似。这种类型的工作始终如一，安全地工作，因为语句var u User将会自动将用户结构清零。Go不像其他语言那样，声明和初始化分开发生，并且通过声明一个值而不初始化它，你可以创建一个微妙的陷阱，你可以访问一段垃圾数据;当声明该值时，运行时将清零适当的内存空间来保存该值。即使我们的UnmarshalHTTP方法未能利用某些字段，这些字段将包含有效的零数据而不是垃圾
 That should seem weird to you if you’re a Python programmer, because it’s basically inside-out of what we typically do in Python. The reason that this form becomes so handy is that now we can define an arbitrary number of types, each of which is responsible for its own unpacking from an http request. It is now up to the entity definitions to decide how they may be represented. Then, we can build around the Entity type to create things like generic HTTP handlers.
+如果你是一名Python程序员，那对你来说应该看起来很奇怪，因为它基本上没有我们通常在Python中做的事情。这个表单变得如此便利的原因是，现在我们可以定义任意数量的类型，每个类型都负责从http请求中自行解包。现在由实体定义决定如何表示它们。然后，我们可以围绕Entity类型创建类似于通用HTTP处理程序的东西。
+（读者注：这也是抽象功能为接口的例子，从请求体中获取不同的数据，都需要又去分析数据的功能，那么可以抽象出一个功能接口，本例中type Entity interface {
+    UnmarshalHTTP(*http.Request) error
+}）
 Wrapping up
 
+总结
 I hope, after reading this, that you feel more comfortable using interfaces in Go. Remember the following:
 * create abstractions by considering the functionality that is common between datatypes, instead of the fields that are common between datatypes
 •通过考虑数据类型之间通用的功能来创建抽象，而不是数据类型之间通用的字段，java是通过抽象数据来抽象对象，go是通过抽象行为（功能）来抽象对象
 * an interface{} value is not of any type; it is of interface{} type
-•interface{}值不是任何类型;它就是interface{}类型，用interface{}类型作为参数的函数或方法，调用时候传入的其他类型的值需要显示的转换成interface{}类型
+•interface{}不是任何类型;它就是interface{}类型，用interface{}类型作为参数的函数或方法，调用时候传入的其他类型的值需要显示的转换成interface{}类型
 * interfaces are two words wide; schematically they look like (type, value)
 •接口是两个字宽;它们看起来像（类型，价值）
 * it is better to accept an interface{} value than it is to return an interface{} value
