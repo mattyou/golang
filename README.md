@@ -1,2 +1,2 @@
 # golang
-learn go lang
+learn golang
